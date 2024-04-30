@@ -341,7 +341,8 @@ function Invoke-OK {
             mandatory = $false,
             position = 1,
             ValueFromRemainingArguments = $true
-        )]$arg
+        )]$arg,
+        [switch] $Edit
     )
 
     if ($commandName -match "^(/|--|-|\\|)(h|\?|help)$") {
@@ -349,6 +350,14 @@ function Invoke-OK {
         return;
     }
     $file = (Get-OKFileLocation);
+
+    if ($Edit) {
+        # TODO: if env:editor - use that
+        # TODO: if found 'code' - use that
+        # TODO: otherwise notepad
+        & code $file
+        return
+    }
 
     if ($null -ne $file) {
         $okFileInfo = (Get-OKCommand $file);
