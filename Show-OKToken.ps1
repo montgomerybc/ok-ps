@@ -149,7 +149,7 @@ function Show-OKToken {
 				}
 			}
 
-			if ($null -ne $token.NestedTokens) {
+			if (($token | Get-Member NestedTokens -ErrorAction:SilentlyContinue) -and $null -ne $token.NestedTokens) {
 
 				# NESTED TOKENS ARE FUN
 				# Strings (and here-strings) can contain nested tokens (as do nested expressions)

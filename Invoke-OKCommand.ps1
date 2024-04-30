@@ -40,6 +40,7 @@ function Get-OKCommand($file) {
 
     $num = 0;
     $physicalLineNum = 0;
+    $maxKeyWidth = 0;
 
     Get-Content $file | ForEach-Object {
         $line = $_.trim();
@@ -56,7 +57,8 @@ function Get-OKCommand($file) {
                 $commandInfo.commandText = $line;
             }
             else {
-                $groups = $rx.Matches($line).Groups;
+                $m = $rx.Matches($line)
+                $groups = if ($m) { $m.Groups }
                 if ($null -ne $groups) {
                     $commandInfo.type = [OKCommandType]::Named
                     $commandInfo.commandText = $groups[0].Groups["commandText"].Value.Trim();
@@ -94,6 +96,8 @@ function Get-OKCommand($file) {
         }
     }
 
+    $maxKeyLength = 0
+    
     # Suggestion: this could be much more configurable
     $alignComments = $true;
     if ($alignComments) {
