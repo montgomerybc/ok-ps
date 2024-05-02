@@ -8,6 +8,7 @@ Enum OKCommandType {
     Comment = 1
     Numbered = 2
     Named = 3
+    Indirect = 4
 }
 
 #$ReservedWords = @("reset","prompt","prompt_default","auto_show","comment_align","verbose","quiet","list","list-once","list-prompt","h","help","h");
@@ -36,7 +37,7 @@ function Get-OKCommand($file) {
     $commands = [ordered]@{ };
 
     $lines = New-Object System.Collections.ArrayList
-    [regex]$rx = "^[ `t]*(?<commandName>[A-Za-z_][A-Za-z0-9-_.]*)[ `t]*\:(?<commandText>.*)$";
+    [regex]$rx = "^[ `t]*(?<indirect>@?)(?<commandName>[A-Za-z_][A-Za-z0-9-_.]*)[ `t]*\:(?<commandText>.*)$";
 
     $num = 0;
     $physicalLineNum = 0;
@@ -64,6 +65,11 @@ function Get-OKCommand($file) {
                     $commandInfo.commandText = $groups[0].Groups["commandText"].Value.Trim();
                     $key = $groups[0].Groups["commandName"].Value.Trim();
                     $num = $num + 1;
+                    
+                    if ($groups[0].Groups["indirect"].value) {
+                        $commandInfo.type = [OKCommandType]::Indirect
+                    }
+                    
                     if ($null -ne $commands[$key]) {
                         # Name has already been used.
                         # (verbose: show warning)
@@ -93,6 +99,32 @@ function Get-OKCommand($file) {
                 $commands.Add($commandInfo.key, $commandInfo) | Out-Null;
             }
             $lines.Add($commandInfo) | Out-Null;
+        }
+    }
+
+    #TODO: escapes to allow '@' in command
+    #TODO: escape to all @r1\b to match command 'r1' followed by the character 'b'
+    #TODO: escape escape char
+    [regex]$rxcmd = '@(?<commandName>[A-Za-z_][A-Za-z0-9-_.]*)'
+    foreach ($line in $lines) {
+        if ($line.type -eq [OKCommandType]::Indirect) {
+            $line.type = [OKCommandType]::Named
+            do {
+                $shouldLoop = $false
+                $mm = $rxcmd.Matches($line.commandText)
+                for ($lp = $mm.Count - 1; $lp -ge 0; $lp--) {
+                    $m = $mm[$lp]
+                    $key = $m.Groups[0].Groups["commandName"].Value
+                    if ($key) {
+                        $cmd = $commands[$key] | Select-Object -ExpandProperty commandText
+                        if ($cmd) {
+                            $line.commandText = $line.commandText.Substring(0, $m.Index) + $cmd + $line.commandText.Substring($m.Index + $m.Length)
+                            $shouldLoop = $true
+                        }
+                    }
+                }
+            }
+            while ($rxcmd.IsMatch($line.commandText) -and $shouldLoop) 
         }
     }
 
@@ -255,10 +287,10 @@ function Invoke-OKCommand {
         $candidates = New-Object System.Collections.ArrayList
 
         $okFileInfo.commands.keys |
-            Where-Object { $_ -like ($commandName + "*") } |
-            ForEach-Object {
-                $candidates.Add($_) | Out-Null;
-            }
+        Where-Object { $_ -like ($commandName + "*") } |
+        ForEach-Object {
+            $candidates.Add($_) | Out-Null;
+        }
         if ($null -eq $candidates -or $candidates.Count -eq 0) {
             Write-Host "ok: unknown command " -f Red -no
             Write-Host "'" -no;
