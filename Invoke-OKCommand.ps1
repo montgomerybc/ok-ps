@@ -384,10 +384,37 @@ function Invoke-OK {
     $file = (Get-OKFileLocation);
 
     if ($Edit) {
-        # TODO: if env:editor - use that
-        # TODO: if found 'code' - use that
-        # TODO: otherwise notepad
-        & code $file
+        if (!$file) {
+            $file = '.\.ok-ps'
+        }
+
+        if (!(Test-Path $file)) {
+            Write-Host "Creating $file" -ForegroundColor DarkGray
+            @"
+# Lines starting with a '#' character are comments.  They may be preceeded by whitespace - spaces, tabs etc.) for example:
+#
+#   This is a comment
+        # and so is this
+#
+# Lines with a 'command name:' prefix are named commands.  e.g.
+#
+#   build: .\build.ps1 foo  # call ``ok build`` to run the command ``.\build.ps1 foo``
+#
+# Otherwise, the entire line is considered to be a single command.  e.g.
+# 
+#   .\build.ps1 bar  # call ``ok 1`` to run the command ``.\build.ps1 bar`` (assuming this is the first 'command' of the file)
+#
+
+Get-ChildItem
+hi: Write-Host "Hello World"
+"@ | Set-Content $file
+        }
+
+        $editor = $env:editor
+        if (!$editor -and (Get-Command code)) { $editor = 'code' }
+        if (!$editor) { $editor = 'notepad' }
+
+        & $editor $file
         return
     }
 
