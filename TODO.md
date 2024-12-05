@@ -7,6 +7,11 @@
 - [Highest Priority]
 - [DONE] (somewhere after line 207)
 
+# davem
+- [x] argument completer
+- [ ] show ui
+
+
 # Done for next release (and or, unpublicised)
 
 

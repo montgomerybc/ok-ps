@@ -368,7 +368,16 @@ ok
 function Invoke-OK {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingInvokeExpression", "")]
     param (
-        [parameter(mandatory = $false, position = 0)][string]$commandName,
+        [parameter(mandatory = $false, position = 0)]
+        [ArgumentCompleter({
+                Param ($c, $p, $w, $a, $fakeBoundParameters)
+                $file = Get-OKFileLocation
+                if ($null -ne $file) {
+                    $okFileInfo = Get-OKCommand $file
+                    $okFileInfo.commands.Keys | Where-Object { !$fakeBoundParameters['commandName'] -or $_.StartsWith($fakeBoundParameters['commandName']) }
+                }
+            })]
+        $commandName,
         [parameter(
             mandatory = $false,
             position = 1,
@@ -376,7 +385,7 @@ function Invoke-OK {
         )]$arg,
         [switch] $Edit
     )
-
+    
     if ($commandName -match "^(/|--|-|\\|)(h|\?|help)$") {
         Get-Help invoke-ok;
         return;
